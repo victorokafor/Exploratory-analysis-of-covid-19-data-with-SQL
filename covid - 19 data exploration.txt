@@ -1,0 +1,209 @@
+/*select *
+from my-data-project-2244.covid.Deaths
+where continent is not null
+order by 3, 4 */
+
+--select *
+--from my-data-project-2244.covid.Vaccinations
+--order by 3, 4
+
+/*Select location,
+       date,
+       total_cases,
+       new_cases,
+       total_deaths,
+       population
+from my-data-project-2244.covid.Deaths 
+where continent is not null 
+order by 1, 2  */  
+
+-- Looking at the Total cases Vs Total deaths.
+
+/*select location,
+       date,
+       coalesce(total_cases, null, 0) as Total_Cases,
+       coalesce(total_deaths, null, 0) as Total_deaths,
+       population,
+       ROUND((total_deaths / total_cases) * 100, 2) as Percent_death
+from my-data-project-2244.covid.Deaths 
+where continent is not null 
+order by 1, 2; */
+
+--Let's see what the death percentage is in Nigeria.
+-- This shows the likelyhood of dying by contracting Covid-19  in Nigeria
+
+/*select location,
+       date,
+       coalesce(total_cases, null, 0) as Total_Cases,
+       coalesce(total_deaths, null, 0) as Total_deaths,
+       population,
+       ROUND((total_deaths / total_cases) * 100, 2) as Percent_death
+from my-data-project-2244.covid.Deaths 
+where location = 'Nigeria' 
+order by 1, 2; */
+ 
+-- Percentage of cases to population in your country.
+-- This reveals the likely hood of meeting a covid-19 patient in Niegria.
+/*select location,
+       date,
+       coalesce(total_cases, null, 0) as Total_Cases,
+       population,
+       ROUND((total_cases / population) * 100, 2) as Percent_population_affected
+from my-data-project-2244.covid.Deaths 
+where location = 'Nigeria' 
+order by 1, 2
+-- This will show the highest threat of Covid-19 to our entire population
+limit 200
+offset 800; */
+
+-- Countries with the highest infection compared to population.
+-- Delete the dashes before 'where' and insert your location to see her highest population affected.
+/*select location,
+       Max(total_cases) as HighestInfectionNumber,
+       population,
+       max((total_cases / population) * 100) as Percent_population_affected
+from my-data-project-2244.covid.Deaths
+where continent is not null
+--where location = 'Nigeria'
+Group by  location, population 
+order by Percent_population_affected desc; */
+
+
+-- Showing countries with highest death per Population 
+/*select location,
+       Max(total_deaths) as HighestCasualityCount,
+       population,
+       max((total_deaths / population) * 100) as Percent_population_affected
+from my-data-project-2244.covid.Deaths
+where continent is not null
+Group by  location, population 
+order by Percent_population_affected desc*/
+
+-- Let's break results out by continent.
+/*select Location,       
+       max(total_deaths) as TotalCasualityCount,
+from my-data-project-2244.covid.Deaths
+where continent is null
+Group by location
+order by totalcasualitycount desc;*/ 
+
+--Shows most affected continent in terms of death.
+/*select continent, max(total_deaths) as totalDeathCount
+from my-data-project-2244.covid.Deaths
+where continent is not null
+group by continent
+order by totalDeathCount desc;*/
+
+--Global numbers for new cases and new deaths grouped by dates
+/*select date, 
+       sum(new_deaths) as count_new_deaths,
+       sum(new_cases) as count_new_cases,
+       (sum(new_deaths)/ sum(nullif(new_cases, 0))) * 100 as percentage_death
+from my-data-project-2244.covid.Deaths
+group by date
+order by 1, 2; */      
+
+-- Total global numbers of new deaths, new cases and percentage of deaths compared to number of cases
+/*select  
+       sum(new_deaths) as count_new_deaths,
+       sum(new_cases) as count_new_cases,
+       (sum(new_deaths)/ sum(nullif(new_cases, 0))) * 100 as percentage_death
+from my-data-project-2244.covid.Deaths
+--group by date
+order by 1, 2; */
+
+--Combining the Vaccinations and Deaths table for more insights
+/*select *
+from my-data-project-2244.covid.Deaths as death 
+INNER JOIN my-data-project-2244.covid.Vaccinations as vac
+      ON  death.location = vac.location 
+      and death.date     = vac.date */ 
+
+
+--Looking at total Population Vs. Vaccinations
+--This query results show the day rolling total of Vaccinations in each country
+/*select d.continent,
+       d.location,
+       d.date,
+       d.population,
+       v.new_vaccinations,
+       sum(v.new_vaccinations) OVER (PARTITION BY d.location order by d.location, d.date) as rolling_vacc_count
+from my-data-project-2244.covid.Deaths as d 
+INNER JOIN my-data-project-2244.covid.Vaccinations as v
+      ON  d.location = v.location 
+      and d.date     = v.date
+where d.continent is not null 
+--and v.new_vaccinations is not null 
+order by 2, 3; */
+
+-- Use CTE
+-- This will show what percentage of the population has been vaccinated
+/*WITH popVSvac as
+(
+select d.continent,
+       d.location,
+       d.date,
+       d.population,
+       v.new_vaccinations,
+       sum(v.new_vaccinations) OVER (PARTITION BY d.location order by d.location, d.date) as rolling_vacc_count
+from my-data-project-2244.covid.Deaths as d 
+INNER JOIN my-data-project-2244.covid.Vaccinations as v
+      ON  d.location = v.location 
+      and d.date     = v.date
+where d.continent is not null 
+--and v.new_vaccinations is not null 
+--order by 2, 3;
+)
+select continent, 
+       location, 
+       date, population, 
+       new_vaccinations, 
+       rolling_vacc_count,
+       (rolling_vacc_count/ population) * 100
+from popVSvac
+where rolling_vacc_count is not null*/
+
+--Use Temp table
+ DROP TABLE IF EXISTS #percentpopulationvaccinated
+CREATE TABLE #percentpopulationvaccinated
+( continent nvarchar(255),
+  location nvarchar(255),
+  Date datetime,
+  population numeric,
+  new_vaccinations numeric,
+  rolling_vacc_count numeric
+)
+
+/*insert into #percentpopulationvaccinated
+select d.continent,
+       d.location,
+       d.date,
+       d.population,
+       v.new_vaccinations,
+       sum(v.new_vaccinations) OVER (PARTITION BY d.location order by d.location, d.date) as rolling_vacc_count
+from my-data-project-2244.covid.Deaths as d 
+INNER JOIN my-data-project-2244.covid.Vaccinations as v
+      ON  d.location = v.location 
+      and d.date     = v.date
+where d.continent is not null 
+--and v.new_vaccinations is not null 
+--order by 2, 3 
+
+
+ select *,
+  (rolling_vacc_count/population) 
+ from  #percentpopulationvaccinated */
+
+-- creating view to store data for later visualizations
+
+create view percentPopulationdeath as 
+select  
+       sum(new_deaths) as count_new_deaths,
+       sum(new_cases) as count_new_cases,
+       (sum(new_deaths)/ sum(nullif(new_cases, 0))) * 100 as percentage_death
+from my-data-project-2244.covid.Deaths
+--group by date
+order by 1, 2; 
+
+
+
